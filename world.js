@@ -25,11 +25,21 @@ class Plant {
 // ==================== 世界类 ====================
 class World {
   constructor(width, height) {
+    this.baseWidth = width;
+    this.baseHeight = height;
     this.width = width;
     this.height = height;
     this.plants = [];
     this.maxPlants = CONFIG.MAX_FOOD;
     this.plantSpawnRate = CONFIG.FOOD_SPAWN_RATE;
+    
+    // 动态世界范围（根据摄像机视野扩展）
+    this.viewBounds = {
+      minX: 0,
+      minY: 0,
+      maxX: width,
+      maxY: height
+    };
   }
 
   // 初始化世界，生成初始植物
@@ -42,39 +52,62 @@ class World {
     }
   }
 
+  // 根据摄像机视野更新世界范围
+  updateViewBounds(camera, canvasWidth, canvasHeight) {
+    // 使用最小缩放时的视野作为最大边界（缩小到最小时能看到的范围）
+    const maxViewWidth = canvasWidth / camera.minZoom;
+    const maxViewHeight = canvasHeight / camera.minZoom;
+    
+    // 当前视野范围（用于计算中心点）
+    const currentViewWidth = canvasWidth / camera.zoom;
+    const currentViewHeight = canvasHeight / camera.zoom;
+    const viewCenterX = camera.x + currentViewWidth / 2;
+    const viewCenterY = camera.y + currentViewHeight / 2;
+    
+    // 边界基于最小缩放时的最大视野 + 边距
+    const margin = 100;
+    const halfMaxWidth = maxViewWidth / 2 + margin;
+    const halfMaxHeight = maxViewHeight / 2 + margin;
+    
+    this.viewBounds.minX = viewCenterX - halfMaxWidth;
+    this.viewBounds.minY = viewCenterY - halfMaxHeight;
+    this.viewBounds.maxX = viewCenterX + halfMaxWidth;
+    this.viewBounds.maxY = viewCenterY + halfMaxHeight;
+    
+    // 更新世界尺寸
+    this.width = this.viewBounds.maxX - this.viewBounds.minX;
+    this.height = this.viewBounds.maxY - this.viewBounds.minY;
+    
+    // 动态调整最大植物数量（世界越大，植物越多）
+    const areaRatio = (this.width * this.height) / (this.baseWidth * this.baseHeight);
+    this.maxPlants = Math.floor(CONFIG.MAX_FOOD * Math.sqrt(areaRatio));
+  }
+
   // 生成单个植物
   spawnPlant(x = null, y = null) {
     if (this.plants.length >= this.maxPlants) {
       return null;
     }
     
-    // 如果没有指定位置，则随机生成
+    // 如果没有指定位置，则在当前世界范围内随机生成
     if (x === null || y === null) {
-      // 使用极坐标生成，实现"一圈圈"向外扩散的渐变效果
-      // 随机角度
       const angle = Math.random() * Math.PI * 2;
       
-      // 随机距离：使用线性分布或指数分布来控制密度
-      // 这里使用 random()^1.5 让分布向中心倾斜，同时保留一定的广度
-      // 距离上限设为世界对角线的一半，确保可以覆盖角落，甚至稍微超出
-      const maxRadius = Math.sqrt(Math.pow(this.width, 2) + Math.pow(this.height, 2)) / 2 * 0.8;
+      // 世界中心
+      const centerX = (this.viewBounds.minX + this.viewBounds.maxX) / 2;
+      const centerY = (this.viewBounds.minY + this.viewBounds.maxY) / 2;
       
-      // 为了让密度随距离 r 明显下降，但又不会在边缘完全消失
-      // 我们混合两种分布：一种是集中的高斯分布（主体），一种是广域的均匀分布（背景噪声）
+      // 最大半径基于当前世界大小
+      const maxRadius = Math.sqrt(this.width * this.width + this.height * this.height) / 2 * 0.8;
       
       let dist;
       if (Math.random() < 0.3) {
-        // 30% 的概率均匀分布在整个大范围内（背景噪声）
-        // 增加背景噪声的概率，并扩大分布范围（2倍对角线）
-        dist = maxRadius * 10 * Math.sqrt(Math.random());
+        // 30% 均匀分布在大范围
+        dist = maxRadius * Math.sqrt(Math.random());
       } else {
-        // 70% 的概率使用指数衰减分布（主体）
-        // 减小幂次，让衰减更平缓，使更多植物分布在中间地带
+        // 70% 集中在中心区域
         dist = maxRadius * Math.pow(Math.random(), 1.5);
       }
-      
-      const centerX = this.width / 2;
-      const centerY = this.height / 2;
       
       x = centerX + Math.cos(angle) * dist;
       y = centerY + Math.sin(angle) * dist;
@@ -85,9 +118,13 @@ class World {
     return plant;
   }
 
-
   // 更新世界状态（植物再生）
-  update() {
+  update(camera = null, canvasWidth = 0, canvasHeight = 0) {
+    // 根据摄像机更新世界范围
+    if (camera && canvasWidth && canvasHeight) {
+      this.updateViewBounds(camera, canvasWidth, canvasHeight);
+    }
+    
     // 根据概率生成新植物
     if (Math.random() < this.plantSpawnRate && this.plants.length < this.maxPlants) {
       this.spawnPlant();
