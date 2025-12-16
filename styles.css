@@ -149,3 +149,49 @@ body {
   font-size: 0.8rem;
   color: #ccc;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+  }
+  
+  .species-buttons {
+    flex: 1 1 100%;
+    overflow-x: auto; /* 允许横向滚动 */
+    padding-bottom: 5px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .species-btn {
+    white-space: nowrap;
+    padding: 12px 16px; /* 增大点击区域 */
+  }
+
+  .game-controls {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .hint {
+    display: none; /* 手机屏小，隐藏提示文字 */
+  }
+
+  .status-bar {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .population-stats {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .keyboard-hints {
+    display: none; /* 手机没有键盘，隐藏按键提示 */
+  }
+}

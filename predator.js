@@ -246,6 +246,26 @@ class Anteater {
   }
 
   /**
+   * 捕食猎物
+   * @param {Object} prey - 猎物
+   */
+  catchPrey(prey) {
+    if (!prey.isAlive) return;
+    
+    prey.die();
+    
+    // 增加能量
+    this.energy += CONFIG.FOOD_ENERGY * 0.4;
+    
+    // 捕食后的冷却逻辑
+    if (this.energy > CONFIG.INITIAL_ENERGY * 1.5) {
+      this.huntCooldown = 120; // 吃饱了
+    } else {
+      this.huntCooldown = 10; // 简单的吞咽冷却
+    }
+  }
+
+  /**
    * 检查是否捕获猎物
    * @param {Array} ants - 蚂蚁列表
    */

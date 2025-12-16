@@ -183,6 +183,136 @@ function setupEventListeners() {
   
   // 滚轮缩放
   canvas.addEventListener('wheel', onWheel, { passive: false });
+  
+  // 添加触摸事件监听
+  setupTouchListeners();
+}
+
+// 触摸状态
+let touchState = {
+  lastX: 0,
+  lastY: 0,
+  lastDist: 0,
+  isDragging: false,
+  isPinching: false,
+  touchStartTime: 0,
+  startWorldX: 0,
+  startWorldY: 0
+};
+
+// 设置触摸监听
+function setupTouchListeners() {
+  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+  canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+}
+
+// 触摸开始
+function handleTouchStart(e) {
+  e.preventDefault();
+  
+  if (e.touches.length === 1) {
+    // 单指操作：可能是点击或拖拽移动
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    
+    touchState.lastX = touch.clientX - rect.left;
+    touchState.lastY = touch.clientY - rect.top;
+    touchState.touchStartTime = Date.now();
+    touchState.isDragging = false;
+    touchState.isPinching = false;
+    
+  } else if (e.touches.length === 2) {
+    // 双指操作：缩放
+    touchState.isPinching = true;
+    touchState.isDragging = false;
+    
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    touchState.lastDist = Math.sqrt(dx * dx + dy * dy);
+  }
+}
+
+// 触摸移动
+function handleTouchMove(e) {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+
+  if (e.touches.length === 1 && !touchState.isPinching) {
+    // 单指拖拽移动地图
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    const dx = x - touchState.lastX;
+    const dy = y - touchState.lastY;
+    
+    // 如果移动距离超过阈值，视为拖拽
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      touchState.isDragging = true;
+      camera.x -= dx / camera.zoom;
+      camera.y -= dy / camera.zoom;
+      clampCamera();
+    }
+    
+    touchState.lastX = x;
+    touchState.lastY = y;
+    
+  } else if (e.touches.length === 2) {
+    // 双指缩放
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (touchState.lastDist > 0) {
+      const zoomSpeed = 0.005;
+      const delta = (dist - touchState.lastDist) * zoomSpeed;
+      
+      // 计算缩放中心（两指中点）
+      const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+      
+      const worldX = (centerX / camera.zoom) + camera.x;
+      const worldY = (centerY / camera.zoom) + camera.y;
+      
+      camera.zoom = Math.max(camera.minZoom, Math.min(camera.maxZoom, camera.zoom + delta));
+      
+      // 保持缩放中心不变
+      camera.x = worldX - (centerX / camera.zoom);
+      camera.y = worldY - (centerY / camera.zoom);
+      
+      clampCamera();
+    }
+    
+    touchState.lastDist = dist;
+  }
+}
+
+// 触摸结束
+function handleTouchEnd(e) {
+  e.preventDefault();
+  
+  // 如果是单指且没有发生明显拖拽（且时间较短），视为点击
+  if (!touchState.isDragging && !touchState.isPinching && e.changedTouches.length === 1) {
+    const duration = Date.now() - touchState.touchStartTime;
+    if (duration < 300) { // 300ms 内视为点击
+      const touch = e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      
+      // 构造一个伪造的 click 事件对象传给 onCanvasClick
+      const fakeEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => {}
+      };
+      onCanvasClick(fakeEvent);
+    }
+  }
+  
+  if (e.touches.length === 0) {
+    touchState.isDragging = false;
+    touchState.isPinching = false;
+  }
 }
 
 // 滚轮缩放事件
