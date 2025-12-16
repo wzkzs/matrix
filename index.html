@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生物进化模拟器</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="game-container">
+    <!-- 顶部工具栏 -->
+    <header class="toolbar">
+      <div class="species-buttons">
+        <button id="btn-ant" class="species-btn active" data-species="ant">🐜 蚂蚁</button>
+        <button id="btn-bird" class="species-btn" data-species="bird">🐦 鸟</button>
+        <button id="btn-anteater" class="species-btn" data-species="anteater">🦡 食蚁兽</button>
+        <button id="btn-snake" class="species-btn" data-species="snake">🐍 蛇</button>
+      </div>
+      <div class="game-controls">
+        <span class="hint">从角落拖拽物种图标放置 | 点击地图放置选中物种</span>
+        <button id="btn-pause" class="control-btn">暂停 (空格)</button>
+        <button id="btn-reset" class="control-btn">重置 (R)</button>
+      </div>
+    </header>
+
+    <!-- Canvas 游戏区域 -->
+    <main class="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+    </main>
+
+    <!-- 底部状态栏 -->
+    <footer class="status-bar">
+      <div class="population-stats">
+        <span class="stat">🐜 蚂蚁: <span id="count-ant">0</span></span>
+        <span class="stat">🐦 鸟: <span id="count-bird">0</span></span>
+        <span class="stat">🦡 食蚁兽: <span id="count-anteater">0</span></span>
+        <span class="stat">🐍 蛇: <span id="count-snake">0</span></span>
+      </div>
+      <div class="generation-info">
+        代数: <span id="generation">0</span>
+      </div>
+      <div class="keyboard-hints">
+        <span class="hint-key">空格</span>=暂停 <span class="hint-key">R</span>=重置 <span class="hint-key">P</span>=信息素
+      </div>
+    </footer>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="world.js"></script>
+  <script src="pheromone.js"></script>
+  <script src="gene.js"></script>
+  <script src="ant.js"></script>
+  <script src="bird.js"></script>
+  <script src="predator.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

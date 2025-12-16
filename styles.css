@@ -1,0 +1,151 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.game-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* 顶部工具栏 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: #16213e;
+  border-bottom: 2px solid #0f3460;
+}
+
+.species-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.species-btn {
+  padding: 10px 16px;
+  border: 2px solid #0f3460;
+  border-radius: 6px;
+  background: #0f3460;
+  color: #eee;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.species-btn:hover {
+  background: #1a4a7a;
+  border-color: #1a4a7a;
+}
+
+.species-btn.active {
+  background: #e94560;
+  border-color: #e94560;
+  color: #fff;
+}
+
+.game-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.control-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #0f3460;
+  color: #eee;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.control-btn:hover {
+  background: #e94560;
+}
+
+/* Canvas 游戏区域 */
+.canvas-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  background: #1a1a2e;
+}
+
+#game-canvas {
+  background: #0f0f23;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  cursor: crosshair;
+}
+
+/* 底部状态栏 */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #16213e;
+  border-top: 2px solid #0f3460;
+}
+
+.population-stats {
+  display: flex;
+  gap: 25px;
+}
+
+.stat {
+  font-size: 0.95rem;
+  color: #ccc;
+}
+
+.stat span {
+  font-weight: bold;
+  color: #e94560;
+}
+
+.generation-info {
+  font-size: 0.95rem;
+  color: #ccc;
+}
+
+.generation-info span {
+  font-weight: bold;
+  color: #4ecdc4;
+}
+
+.keyboard-hints {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.hint-key {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 2px;
+  background: #0f3460;
+  border: 1px solid #1a4a7a;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #ccc;
+}
