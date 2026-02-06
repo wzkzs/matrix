@@ -169,17 +169,17 @@ class World {
 
   // 检查位置是否在世界边界内
   isInBounds(x, y, padding = 0) {
-    return x >= padding && 
-           x <= this.width - padding && 
-           y >= padding && 
-           y <= this.height - padding;
+    return x >= this.viewBounds.minX + padding && 
+           x <= this.viewBounds.maxX - padding && 
+           y >= this.viewBounds.minY + padding && 
+           y <= this.viewBounds.maxY - padding;
   }
 
   // 将位置限制在世界边界内
   clampToBounds(x, y, padding = 0) {
     return {
-      x: Math.max(padding, Math.min(this.width - padding, x)),
-      y: Math.max(padding, Math.min(this.height - padding, y))
+      x: Math.max(this.viewBounds.minX + padding, Math.min(this.viewBounds.maxX - padding, x)),
+      y: Math.max(this.viewBounds.minY + padding, Math.min(this.viewBounds.maxY - padding, y))
     };
   }
 

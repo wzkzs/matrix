@@ -63,6 +63,9 @@ class Ant extends Creature {
       this.fleeTimer--;
     } else if (this.hasFood) {
       this.returnToNest();
+    } else if (this.energy < CONFIG.INITIAL_ENERGY * 0.3) {
+      // 能量不足 → 返回巢穴补给（真实蚂蚁行为：能量驱动回巢）
+      this.returnToNest();
     } else {
       this.searchForFood(world, pheromoneGrid);
     }
@@ -76,7 +79,8 @@ class Ant extends Creature {
     this.depositPheromone(pheromoneGrid);
     this.consumeEnergy(1, 0.005, 0.01);
     
-    if (this.hasFood) {
+    // 检查到达蚁巢（携带食物回巢 或 低能量返巢休息）
+    if (this.hasFood || this.energy < CONFIG.INITIAL_ENERGY * 0.3) {
       this.checkNestArrival();
     }
     
@@ -158,57 +162,72 @@ class Ant extends Creature {
   }
 
   /**
-   * 寻找植物
+   * 寻找食物
+   * 真实蚂蚁行为：视觉优先发现食物 → 信息素概率引导 → 随机漫游探索
    */
   searchForFood(world, pheromoneGrid) {
+    // 1. 视觉优先：感知范围内直接发现食物
     const nearestPlant = world.getNearestPlant(this.x, this.y, this.gene.perception);
     
     if (nearestPlant) {
       this.moveTowards(nearestPlant.x, nearestPlant.y);
     } else {
+      // 2. 信息素引导：ACO 概率性跟随
       this.followPheromone(pheromoneGrid);
     }
   }
 
   /**
-   * 跟随信息素
+   * 跟随信息素（ACO 概率选择）
+   * 
+   * 真实蚂蚁行为：
+   * - 不是总走最浓的路，而是概率性选择（轮盘赌）
+   * - 浓度高的路径被选中概率更大，但总有蚂蚁选择其他方向
+   * - 这天然避免了所有蚂蚁聚集在同一点
    */
   followPheromone(pheromoneGrid) {
-    const strongestDir = pheromoneGrid.getStrongestDirection(this.x, this.y, 2);
+    // ACO 轮盘赌选择方向（传入当前航向用于惯性偏置）
+    const selected = pheromoneGrid.selectDirectionProbabilistic(
+      this.x, this.y, this.vx, this.vy, 2, 2
+    );
     
-    if (strongestDir && strongestDir.strength > 1) {
+    if (selected) {
+      // 巢穴附近不跟随信息素，促使蚂蚁向外探索
       const toNestDist = Math.sqrt(
         Math.pow(this.nestX - this.x, 2) + Math.pow(this.nestY - this.y, 2)
       );
-      
       if (toNestDist < 80) {
         this.wander();
         return;
       }
-
-      const energyRatio = this.energy / CONFIG.INITIAL_ENERGY;
-      if (energyRatio < 0.5 && toNestDist < 150) {
-        this.wander();
-        return;
-      }
       
-      const dx = strongestDir.x - this.x;
-      const dy = strongestDir.y - this.y;
+      const dx = selected.x - this.x;
+      const dy = selected.y - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       
       if (dist > 0) {
-        const pheromoneWeight = 0.7;
+        // 平滑转向：保持一定的当前惯性，不会急转弯
+        const pheromoneWeight = 0.5;
         this.vx = this.vx * (1 - pheromoneWeight) + (dx / dist) * pheromoneWeight;
         this.vy = this.vy * (1 - pheromoneWeight) + (dy / dist) * pheromoneWeight;
         this.normalizeVelocity();
       }
     } else {
+      // 无信息素可循：随机漫游探索新区域
       this.wander();
     }
   }
 
   /**
    * 释放信息素
+   * 
+   * 真实蚂蚁行为：
+   * - 携带食物回巢时沿途均匀释放信息素
+   * - 每步释放量相同（短路径强化靠的是时间效应，不是单次释放量）
+   *   → 短路径往返更快 → 单位时间更多趟次 → 累积浓度更高
+   *   → 长路径往返慢 → 信息素在等待间蒸发 → 浓度低
+   * - 巢穴附近不释放，避免入口信息素堆积干扰搜索方向
+   * - 探索时不释放信息素（负反馈完全依赖自然蒸发）
    */
   depositPheromone(pheromoneGrid) {
     if (this.hasFood) {
@@ -216,7 +235,8 @@ class Ant extends Creature {
       const dy = this.y - this.nestY;
       const distToNest = Math.sqrt(dx * dx + dy * dy);
 
-      if (distToNest > 60) {
+      // 巢穴附近不释放，避免入口区域信息素过密
+      if (distToNest > 30) {
         pheromoneGrid.deposit(this.x, this.y, CONFIG.PHEROMONE_DEPOSIT * 2);
       }
     }
@@ -231,6 +251,9 @@ class Ant extends Creature {
 
   /**
    * 检查是否到达蚁巢
+   * 支持两种回巢场景：
+   * 1. 携带食物回巢 → 卸下食物、恢复能量、进巢休息
+   * 2. 能量不足回巢 → 进巢休息（停止消耗能量）
    */
   checkNestArrival() {
     const dx = this.nestX - this.x;
@@ -238,8 +261,10 @@ class Ant extends Creature {
     const dist = Math.sqrt(dx * dx + dy * dy);
     
     if (dist < 15) {
-      this.hasFood = false;
-      this.energy += CONFIG.FOOD_ENERGY;
+      if (this.hasFood) {
+        this.hasFood = false;
+        this.energy += CONFIG.FOOD_ENERGY;
+      }
       this.isInsideNest = true;
       this.stayInNestTimer = 60;
       return true;
@@ -371,7 +396,7 @@ class AntNest {
    */
   update(ants, pheromoneGrid = null) {
     this.antCount = ants.filter(ant => 
-      ant.isInsideNest && ant.nestX === this.x && ant.nestY === this.y
+      ant.isAlive && ant.isInsideNest && ant.nestX === this.x && ant.nestY === this.y
     ).length;
     
     if (this.spawnCooldown > 0) {

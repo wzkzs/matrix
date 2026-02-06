@@ -353,7 +353,7 @@ class Bird extends Creature {
 
       if (this.distanceTo(ant) < eatRadius) {
         ant.die();
-        this.energy += CONFIG.FOOD_ENERGY * 0.02;
+        this.energy += CONFIG.FOOD_ENERGY * 0.2;
         return;
       }
     }

@@ -138,14 +138,13 @@ class PheromoneGrid {
   }
 
   /**
-   * 获取信息素浓度最高的方向
+   * 获取信息素浓度最高的方向（备用方法）
    */
   getStrongestDirection(x, y, radius = 1) {
     const surrounding = this.getSurroundingStrength(x, y, radius);
     
     if (surrounding.length === 0) return null;
     
-    // 找到浓度最高的位置
     let strongest = surrounding[0];
     for (const cell of surrounding) {
       if (cell.strength > strongest.strength) {
@@ -153,7 +152,6 @@ class PheromoneGrid {
       }
     }
     
-    // 如果最强浓度为0，返回null
     if (strongest.strength === 0) return null;
     
     return {
@@ -161,6 +159,76 @@ class PheromoneGrid {
       y: strongest.worldY,
       strength: strongest.strength
     };
+  }
+
+  /**
+   * ACO 轮盘赌概率选择方向（真实蚁群行为）
+   * 
+   * 真实蚂蚁不会总是走信息素最浓的路，而是：
+   * - 浓度越高，被选中的概率越大（但不是 100%）
+   * - 倾向于沿当前行进方向前进（航向惯性）
+   * - 公式: P(i) ∝ τ_i^α × headingBias_i
+   * 
+   * @param {number} x - 世界x坐标
+   * @param {number} y - 世界y坐标
+   * @param {number} vx - 当前速度x分量
+   * @param {number} vy - 当前速度y分量
+   * @param {number} radius - 搜索网格半径
+   * @param {number} alpha - 信息素影响因子（越大越偏好强路径）
+   * @returns {Object|null} {x, y, strength} 或 null
+   */
+  selectDirectionProbabilistic(x, y, vx, vy, radius = 2, alpha = 2) {
+    const surrounding = this.getSurroundingStrength(x, y, radius);
+    
+    // 仅考虑有信息素的格子
+    const candidates = surrounding.filter(cell => cell.strength > 0.5);
+    if (candidates.length === 0) return null;
+    
+    // 归一化当前航向
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    const headingX = speed > 0.01 ? vx / speed : 0;
+    const headingY = speed > 0.01 ? vy / speed : 0;
+    
+    // 为每个候选格子计算选择权重
+    let totalWeight = 0;
+    const weighted = [];
+    
+    for (const cell of candidates) {
+      const dx = cell.worldX - x;
+      const dy = cell.worldY - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 0.01) continue;
+      
+      // 航向偏置：与当前方向的点积，映射到 [0.1, 1.0]
+      // 前方 ≈ 1.0, 侧面 ≈ 0.55, 后方 ≈ 0.1
+      const dot = headingX * (dx / dist) + headingY * (dy / dist);
+      const headingBias = Math.max(0.1, (dot + 1) / 2);
+      
+      // ACO 概率公式: τ^α × headingBias
+      const weight = Math.pow(cell.strength, alpha) * headingBias;
+      totalWeight += weight;
+      weighted.push({ cell, weight });
+    }
+    
+    if (totalWeight <= 0 || weighted.length === 0) return null;
+    
+    // 轮盘赌选择
+    let r = Math.random() * totalWeight;
+    for (const item of weighted) {
+      r -= item.weight;
+      if (r <= 0) {
+        return {
+          x: item.cell.worldX,
+          y: item.cell.worldY,
+          strength: item.cell.strength
+        };
+      }
+    }
+    
+    // 兜底
+    const last = weighted[weighted.length - 1];
+    return { x: last.cell.worldX, y: last.cell.worldY, strength: last.cell.strength };
   }
 
   /**

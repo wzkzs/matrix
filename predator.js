@@ -271,7 +271,7 @@ class Snake extends Predator {
     
     // 伏击系统状态机
     this.state = 'wander'; // 'wander' | 'stopping' | 'ambush' | 'strike' | 'recover'
-    this.stateTimer = 0;
+    this.stateTimer = 100 + Math.random() * 200; // 初始漫游一段时间再切换状态
     this.strikeTarget = null;
     
     // 蛇身体段

@@ -74,8 +74,8 @@ function init() {
 
 // 将摄像机对准世界中心
 function centerCamera() {
-  camera.x = CONFIG.WORLD_WIDTH / 2 - canvas.width / 2;
-  camera.y = CONFIG.WORLD_HEIGHT / 2 - canvas.height / 2;
+  camera.x = CONFIG.WORLD_WIDTH / 2 - canvas.width / (2 * camera.zoom);
+  camera.y = CONFIG.WORLD_HEIGHT / 2 - canvas.height / (2 * camera.zoom);
   // 限制摄像机不要超出太多
   clampCamera();
 }
@@ -661,7 +661,7 @@ function update() {
 
   // 更新蚁巢（可能生成新蚂蚁，同时释放信息素）
   for (const nest of antNests) {
-    const nestAnts = creatures.filter(c => c.type === 'ant');
+    const nestAnts = creatures.filter(c => c.type === 'ant' && c.isAlive);
     const newAnt = nest.update(nestAnts, pheromoneGrid);
     if (newAnt) {
       creatures.push(newAnt);
