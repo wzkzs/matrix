@@ -319,14 +319,13 @@ class Snake extends Predator {
         break;
         
       case 'stopping':
-        const normalSpeed = this.gene.speed * 0.4;
-        const progress = this.stateTimer / 60;
         // 减速在 move() 中处理
         if (this.stateTimer <= 0) {
           this.state = 'ambush';
           this.stateTimer = 200 + Math.random() * 300;
           this.vx = 0;
           this.vy = 0;
+          // 不强制盘蛇，身体自然保持减速停下时的尾迹弧线
         }
         break;
         
@@ -453,11 +452,21 @@ class Snake extends Predator {
         curr.x = prev.x + dx * scale;
         curr.y = prev.y + dy * scale;
       } else {
-        curr.x = prev.x - this.vx * this.segmentSpacing;
-        curr.y = prev.y - this.vy * this.segmentSpacing;
+        // 兜底：用前一段的方向推断，避免 vx=vy=0 时段重叠塌缩
+        let fallbackAngle;
+        if (i >= 2) {
+          const pp = this.bodySegments[i - 2];
+          fallbackAngle = Math.atan2(prev.y - pp.y, prev.x - pp.x) + Math.PI;
+        } else {
+          fallbackAngle = Math.atan2(this.vy, this.vx) + Math.PI;
+          if (this.vx === 0 && this.vy === 0) fallbackAngle = Math.random() * Math.PI * 2;
+        }
+        curr.x = prev.x + Math.cos(fallbackAngle) * this.segmentSpacing;
+        curr.y = prev.y + Math.sin(fallbackAngle) * this.segmentSpacing;
       }
     }
   }
+
 
   reproduce() {
     return this.reproduceChild(Snake);
@@ -467,6 +476,11 @@ class Snake extends Predator {
     if (!this.isAlive) return;
     
     ctx.save();
+    
+    // 伏击状态半透明，暗示蛇在隐蔽
+    if (this.state === 'ambush') {
+      ctx.globalAlpha = 0.7;
+    }
     
     const segmentSize = this.size * 0.7;
     
@@ -487,6 +501,11 @@ class Snake extends Predator {
       if (this.state === 'strike') {
         const colorIntensity = Math.floor(100 + (i / this.bodySegments.length) * 50);
         ctx.fillStyle = `rgb(${colorIntensity + 50}, ${50}, ${50})`;
+      } else if (this.state === 'ambush') {
+        // 伏击时颜色更暗沉，模拟隐蔽
+        const baseG = 110;
+        const variation = Math.sin(i * 0.5) * 15;
+        ctx.fillStyle = `rgb(${25 + variation}, ${baseG - i * 2}, ${25 + variation})`;
       } else {
         const baseG = 139;
         const variation = Math.sin(i * 0.5) * 20;
@@ -497,12 +516,14 @@ class Snake extends Predator {
       ctx.arc(segment.x, segment.y, currentSize, 0, Math.PI * 2);
       ctx.fill();
       
-      // 花纹
+      // 花纹 —— 用段间局部方向旋转，而非全局速度
       if (i % 3 === 0 && i > 0 && i < this.bodySegments.length - 2) {
+        const prev = this.bodySegments[i - 1];
+        const patternAngle = Math.atan2(segment.y - prev.y, segment.x - prev.x);
         ctx.fillStyle = `rgba(0, 50, 0, 0.4)`;
         ctx.beginPath();
         ctx.ellipse(segment.x, segment.y, currentSize * 0.8, currentSize * 0.4, 
-                    Math.atan2(this.vy, this.vx), 0, Math.PI * 2);
+                    patternAngle, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -534,8 +555,11 @@ class Snake extends Predator {
     ctx.ellipse(segmentSize * 0.45, segmentSize * 0.4, segmentSize * 0.08, segmentSize * 0.2, 0, 0, Math.PI * 2);
     ctx.fill();
     
-    // 舌头
-    if (this.state === 'strike' || (this.state === 'wander' && Math.random() < 0.1)) {
+    // 舌头 —— 突袭时常吐、漫游和伏击时偶尔吐信
+    const showTongue = this.state === 'strike' || 
+                       (this.state === 'wander' && Math.random() < 0.1) ||
+                       (this.state === 'ambush' && Math.random() < 0.03);
+    if (showTongue) {
       ctx.strokeStyle = '#f00';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
